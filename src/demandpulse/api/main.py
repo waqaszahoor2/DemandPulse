@@ -164,6 +164,7 @@ def create_app(
 
     for router in [health.router, forecast.router, causal.router, inventory.router, models.router, metrics.router]:
         application.include_router(router)
+        application.include_router(router, prefix="/api")
     return application
 
 
