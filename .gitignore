@@ -1,0 +1,49 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+build/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Models and generated reports
+models/*
+!models/.gitkeep
+reports/*
+!reports/.gitkeep
+
+# Local configuration / credentials
+.env
+.env.*
+!.env.example
+.DS_Store
+
+# MLflow local tracking stores
+mlruns/
+mlartifacts/
+*.db
+
+# Runtime/logging
+logs/
+*.log
+
+# IDE
+.idea/
+.vscode/
+
+# Temporary credentials created by google-github-actions/auth
+gha-creds-*.json

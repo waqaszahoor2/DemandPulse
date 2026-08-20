@@ -1,0 +1,226 @@
+name: Deploy Cloud Run
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  PYTHON_VERSION: "3.11"
+
+jobs:
+  quality-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - name: Install package and quality tools
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+      - name: Release quality gate
+        run: make ci
+
+  build-push:
+    needs: quality-gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    outputs:
+      image: ${{ steps.image.outputs.image_sha }}
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Authenticate to Google Cloud with Workload Identity Federation
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
+
+      - uses: google-github-actions/setup-gcloud@v3
+        with:
+          project_id: ${{ vars.GCP_PROJECT_ID }}
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker "${{ vars.GCP_REGION }}-docker.pkg.dev" --quiet
+
+      - name: Read application version
+        id: version
+        shell: bash
+        run: |
+          VERSION=$(python - <<'PY'
+          import tomllib
+          with open("pyproject.toml", "rb") as f:
+              print(tomllib.load(f)["project"]["version"])
+          PY
+          )
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Build immutable image
+        id: image
+        shell: bash
+        run: |
+          IMAGE_BASE="${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/${{ vars.GAR_REPOSITORY }}/demandpulse-api"
+          IMAGE_SHA="${IMAGE_BASE}:${GITHUB_SHA}"
+          IMAGE_VERSION="${IMAGE_BASE}:v${{ steps.version.outputs.version }}"
+          docker build \
+            --build-arg APP_VERSION="${{ steps.version.outputs.version }}" \
+            --build-arg VCS_REF="${GITHUB_SHA}" \
+            --build-arg SOURCE_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}" \
+            -t "${IMAGE_SHA}" -t "${IMAGE_VERSION}" .
+          echo "image_sha=${IMAGE_SHA}" >> "$GITHUB_OUTPUT"
+          echo "image_version=${IMAGE_VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Container vulnerability scan
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: ${{ steps.image.outputs.image_sha }}
+          format: table
+          exit-code: "1"
+          ignore-unfixed: true
+          severity: CRITICAL,HIGH
+
+      - name: Push image tags
+        run: |
+          docker push "${{ steps.image.outputs.image_sha }}"
+          docker push "${{ steps.image.outputs.image_version }}"
+
+  staging:
+    needs: build-push
+    runs-on: ubuntu-latest
+    environment: staging
+    timeout-minutes: 20
+    outputs:
+      url: ${{ steps.url.outputs.url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
+      - uses: google-github-actions/setup-gcloud@v3
+        with:
+          project_id: ${{ vars.GCP_PROJECT_ID }}
+
+      - name: Deploy staging revision
+        run: |
+          gcloud run deploy "${{ vars.CLOUD_RUN_STAGING_SERVICE }}" \
+            --project "${{ vars.GCP_PROJECT_ID }}" \
+            --region "${{ vars.GCP_REGION }}" \
+            --image "${{ needs.build-push.outputs.image }}" \
+            --service-account "${{ vars.CLOUD_RUN_RUNTIME_SERVICE_ACCOUNT }}" \
+            --port 8000 \
+            --cpu "${{ vars.STAGING_CPU || '1' }}" \
+            --memory "${{ vars.STAGING_MEMORY || '1Gi' }}" \
+            --concurrency "${{ vars.STAGING_CONCURRENCY || '20' }}" \
+            --timeout 30s \
+            --min 0 --max "${{ vars.STAGING_MAX_INSTANCES || '3' }}" \
+            --no-allow-unauthenticated \
+            --set-env-vars "APP_ENV=staging,LOG_LEVEL=INFO,LOG_FORMAT=json,MODEL_DIR=/app/models,MODEL_BUNDLE_URI=${{ vars.STAGING_MODEL_BUNDLE_URI }},REQUIRED_MODEL_COMPONENTS=point\,probabilistic,DEMANDPULSE_MODEL_SOURCE=local,METRICS_ENABLED=true,REQUEST_TIMEOUT_SECONDS=25,MAX_REQUEST_BYTES=262144" \
+            --startup-probe "httpGet.path=/ready,httpGet.port=8000,periodSeconds=5,timeoutSeconds=2,failureThreshold=24" \
+            --liveness-probe "httpGet.path=/health,httpGet.port=8000,periodSeconds=30,timeoutSeconds=3,failureThreshold=3" \
+            --readiness-probe "httpGet.path=/ready,httpGet.port=8000,periodSeconds=5,timeoutSeconds=2,failureThreshold=3,successThreshold=1" \
+            --quiet
+
+      - name: Resolve staging URL
+        id: url
+        run: |
+          URL=$(gcloud run services describe "${{ vars.CLOUD_RUN_STAGING_SERVICE }}" --region "${{ vars.GCP_REGION }}" --format='value(status.url)')
+          echo "url=${URL}" >> "$GITHUB_OUTPUT"
+
+      - name: Staging smoke tests
+        env:
+          BASE_URL: ${{ steps.url.outputs.url }}
+          SMOKE_FORECAST_PAYLOAD: ${{ vars.SMOKE_FORECAST_PAYLOAD }}
+        run: |
+          TOKEN=$(gcloud auth print-identity-token --audiences="$BASE_URL")
+          python scripts/smoke_test.py --base-url "$BASE_URL" --require-ready --bearer-token "$TOKEN"
+          test -n "$SMOKE_FORECAST_PAYLOAD" || { echo "SMOKE_FORECAST_PAYLOAD environment variable is required"; exit 1; }
+          RESPONSE=$(curl --fail-with-body --silent --show-error \
+            -H "Authorization: Bearer $TOKEN" \
+            -H 'Content-Type: application/json' \
+            -d "$SMOKE_FORECAST_PAYLOAD" \
+            "$BASE_URL/forecast")
+          python -c 'import json,sys; r=json.loads(sys.argv[1]); assert isinstance(r["prediction"], (int,float)) and r["prediction"] >= 0; assert r["model_version"]' "$RESPONSE"
+
+      - name: Safe staging load check
+        run: |
+          TOKEN=$(gcloud auth print-identity-token --audiences="${{ steps.url.outputs.url }}")
+          python scripts/load_test.py --base-url "${{ steps.url.outputs.url }}" --endpoint /health --requests 25 --bearer-token "$TOKEN"
+
+  production:
+    needs: [build-push, staging]
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
+      - uses: google-github-actions/setup-gcloud@v3
+        with:
+          project_id: ${{ vars.GCP_PROJECT_ID }}
+
+      - name: Capture current serving revision for rollback
+        id: previous
+        shell: bash
+        run: |
+          PREVIOUS=$(gcloud run services describe "${{ vars.CLOUD_RUN_PRODUCTION_SERVICE }}" \
+            --region "${{ vars.GCP_REGION }}" \
+            --format='value(status.traffic[0].revisionName)' 2>/dev/null || true)
+          echo "revision=${PREVIOUS}" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy production revision
+        run: |
+          gcloud run deploy "${{ vars.CLOUD_RUN_PRODUCTION_SERVICE }}" \
+            --project "${{ vars.GCP_PROJECT_ID }}" \
+            --region "${{ vars.GCP_REGION }}" \
+            --image "${{ needs.build-push.outputs.image }}" \
+            --service-account "${{ vars.CLOUD_RUN_RUNTIME_SERVICE_ACCOUNT }}" \
+            --port 8000 \
+            --cpu "${{ vars.PRODUCTION_CPU || '2' }}" \
+            --memory "${{ vars.PRODUCTION_MEMORY || '2Gi' }}" \
+            --concurrency "${{ vars.PRODUCTION_CONCURRENCY || '40' }}" \
+            --timeout 30s \
+            --min "${{ vars.PRODUCTION_MIN_INSTANCES || '1' }}" \
+            --max "${{ vars.PRODUCTION_MAX_INSTANCES || '10' }}" \
+            --no-allow-unauthenticated \
+            --set-env-vars "APP_ENV=production,LOG_LEVEL=INFO,LOG_FORMAT=json,MODEL_DIR=/app/models,MODEL_BUNDLE_URI=${{ vars.PRODUCTION_MODEL_BUNDLE_URI }},REQUIRED_MODEL_COMPONENTS=point\,probabilistic,DEMANDPULSE_MODEL_SOURCE=local,METRICS_ENABLED=false,REQUEST_TIMEOUT_SECONDS=25,MAX_REQUEST_BYTES=262144" \
+            --startup-probe "httpGet.path=/ready,httpGet.port=8000,periodSeconds=5,timeoutSeconds=2,failureThreshold=24" \
+            --liveness-probe "httpGet.path=/health,httpGet.port=8000,periodSeconds=30,timeoutSeconds=3,failureThreshold=3" \
+            --readiness-probe "httpGet.path=/ready,httpGet.port=8000,periodSeconds=5,timeoutSeconds=2,failureThreshold=3,successThreshold=1" \
+            --quiet
+
+      - name: Production smoke tests
+        id: smoke
+        env:
+          SMOKE_FORECAST_PAYLOAD: ${{ vars.SMOKE_FORECAST_PAYLOAD }}
+        run: |
+          URL=$(gcloud run services describe "${{ vars.CLOUD_RUN_PRODUCTION_SERVICE }}" --region "${{ vars.GCP_REGION }}" --format='value(status.url)')
+          TOKEN=$(gcloud auth print-identity-token --audiences="$URL")
+          python scripts/smoke_test.py --base-url "$URL" --require-ready --bearer-token "$TOKEN"
+          test -n "$SMOKE_FORECAST_PAYLOAD" || { echo "SMOKE_FORECAST_PAYLOAD environment variable is required"; exit 1; }
+          RESPONSE=$(curl --fail-with-body --silent --show-error -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' -d "$SMOKE_FORECAST_PAYLOAD" "$URL/forecast")
+          python -c 'import json,sys; r=json.loads(sys.argv[1]); assert r["prediction"] >= 0 and r["model_version"]' "$RESPONSE"
+
+      - name: Roll back failed production deployment
+        if: failure() && steps.previous.outputs.revision != ''
+        run: |
+          gcloud run services update-traffic "${{ vars.CLOUD_RUN_PRODUCTION_SERVICE }}" \
+            --region "${{ vars.GCP_REGION }}" \
+            --to-revisions "${{ steps.previous.outputs.revision }}=100" \
+            --quiet

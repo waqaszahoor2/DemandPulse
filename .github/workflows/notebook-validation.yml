@@ -1,0 +1,54 @@
+name: Notebook Validation Pipeline
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'notebooks/*.ipynb'
+      - 'src/**'
+      - 'scripts/run_all_notebooks.py'
+
+jobs:
+  validate-notebooks:
+    name: Execute Notebooks 01 to 07
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Execute Notebook Pipeline (01 -> 07)
+        env:
+          NOTEBOOK_TIMEOUT: '7200'
+          PYTHONPATH: 'src'
+        run: |
+          python scripts/run_all_notebooks.py
+
+      - name: Audit Model File Sizes
+        run: |
+          python scripts/audit_models.py
+
+      - name: Validate Deployment Readiness
+        run: |
+          python scripts/validate_deployment.py
+
+      - name: Upload Execution Report Artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: notebook-execution-report
+          path: |
+            reports/notebook_execution_report.json
+            reports/model_size_audit.csv

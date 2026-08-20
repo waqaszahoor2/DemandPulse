@@ -1,0 +1,66 @@
+services:
+  mlflow:
+    build:
+      context: .
+      args:
+        APP_VERSION: ${APP_VERSION:-0.4.0}
+        VCS_REF: ${GIT_COMMIT:-local}
+        SOURCE_URL: ${SOURCE_REPOSITORY:-local}
+    image: demandpulse-api:${APP_VERSION:-0.4.0}
+    command:
+      - sh
+      - -c
+      - >-
+        exec mlflow server
+        --host 0.0.0.0
+        --port 5000
+        --backend-store-uri sqlite:////mlflow/mlflow.db
+        --artifacts-destination /mlflow/artifacts
+        --serve-artifacts
+        --allowed-hosts "localhost:*,127.0.0.1:*,mlflow:5000"
+    environment:
+      APP_ENV: ${APP_ENV:-development}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    ports:
+      - "5000:5000"
+    volumes:
+      - mlflow-data:/mlflow
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5000/', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 15s
+    restart: unless-stopped
+
+  demandpulse-api:
+    build:
+      context: .
+      args:
+        APP_VERSION: ${APP_VERSION:-0.4.0}
+        VCS_REF: ${GIT_COMMIT:-local}
+        SOURCE_URL: ${SOURCE_REPOSITORY:-local}
+    image: demandpulse-api:${APP_VERSION:-0.4.0}
+    environment:
+      APP_ENV: ${APP_ENV:-development}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      MODEL_DIR: /app/models
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+      MLFLOW_EXPERIMENT_NAME: ${MLFLOW_EXPERIMENT_NAME:-demandpulse-point-forecasting}
+      API_HOST: 0.0.0.0
+      API_PORT: 8000
+      DEMANDPULSE_MODEL_SOURCE: ${DEMANDPULSE_MODEL_SOURCE:-local}
+    depends_on:
+      mlflow:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    volumes:
+      - demandpulse-models:/app/models
+    restart: unless-stopped
+
+volumes:
+  mlflow-data:
+    name: demandpulse-mlflow-data
+  demandpulse-models:
+    name: demandpulse-models

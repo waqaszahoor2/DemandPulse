@@ -1,0 +1,87 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install package and quality tools
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+
+      - name: Lint
+        run: make lint
+
+      - name: Format check
+        run: make format-check
+
+      - name: Type check
+        run: make typecheck
+
+      - name: Tests and coverage
+        run: make test
+
+      - name: Import check
+        run: python -c "import demandpulse; import demandpulse.api.main; import demandpulse.mlops.tracking; print(demandpulse.__version__)"
+
+      - name: Capture resolved dependency versions
+        run: python -m pip freeze | sort > resolved-dependencies.txt
+
+      - name: Upload dependency snapshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: resolved-dependencies-${{ github.sha }}
+          path: resolved-dependencies.txt
+          retention-days: 14
+
+      - name: API smoke test
+        shell: bash
+        run: |
+          set -euo pipefail
+          uvicorn demandpulse.api.main:app --host 127.0.0.1 --port 8000 > /tmp/demandpulse-api.log 2>&1 &
+          API_PID=$!
+          trap 'kill ${API_PID} || true' EXIT
+          python - <<'PY'
+          import time
+          import urllib.request
+          for _ in range(30):
+              try:
+                  with urllib.request.urlopen("http://127.0.0.1:8000/health", timeout=2) as response:
+                      assert response.status == 200
+                  with urllib.request.urlopen("http://127.0.0.1:8000/docs", timeout=2) as response:
+                      assert response.status == 200
+                  break
+              except Exception:
+                  time.sleep(1)
+          else:
+              raise SystemExit("DemandPulse API smoke test failed")
+          PY
+
+      - name: Dependency security audit
+        run: make security
+
+      - name: Secret scan
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

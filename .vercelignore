@@ -1,0 +1,33 @@
+# Vercel serverless deployment ignore rules
+
+# Notebooks and research code
+notebooks/
+*.ipynb
+
+# Local data, caches, and tracking
+data/
+mlruns/
+.pytest_cache/
+__pycache__/
+*.pyc
+*.pyo
+
+# Heavy reports and plots
+reports/figures/
+reports/notebook_execution_report.json
+
+# Development and testing
+tests/
+scripts/
+.github/
+.git/
+.gitignore
+Makefile
+
+# Environment and IDE configs
+.env
+.env.local
+.vscode/
+.idea/
+
+# Note: Do NOT exclude models/ directory containing inference artifacts required by FastAPI
