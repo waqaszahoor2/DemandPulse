@@ -6,8 +6,9 @@ import asyncio
 import re
 import time
 import uuid
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from typing import Any, AsyncIterator
+from typing import Any
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
@@ -58,10 +59,17 @@ def create_app(
         app.state.prediction_logger = prediction_logger
         app.state.metrics_enabled = config.metrics_enabled
         service.load_models()
-        readiness = service.readiness_report() if hasattr(service, "readiness_report") else {"ready": all(service.models_loaded.values())}
+        readiness = (
+            service.readiness_report()
+            if hasattr(service, "readiness_report")
+            else {"ready": all(service.models_loaded.values())}
+        )
         logger.info(
             "service_model_readiness",
-            extra={"ready": bool(readiness.get("ready", False)), "model_version": getattr(service, "serving_model_version", "unknown")},
+            extra={
+                "ready": bool(readiness.get("ready", False)),
+                "model_version": getattr(service, "serving_model_version", "unknown"),
+            },
         )
         yield
         prediction_logger.flush()
@@ -95,7 +103,9 @@ def create_app(
         if too_large:
             response = JSONResponse(
                 status_code=413,
-                content=ErrorResponse(detail="Request body exceeds configured size limit", request_id=request_id).model_dump(),
+                content=ErrorResponse(
+                    detail="Request body exceeds configured size limit", request_id=request_id
+                ).model_dump(),
             )
             response.headers["X-Request-ID"] = request_id
             telemetry.record_request(request.url.path, 413, (time.perf_counter() - start) * 1000)
@@ -140,7 +150,9 @@ def create_app(
         return response
 
     def error_payload(request: Request, detail: str) -> dict[str, str | None]:
-        return ErrorResponse(detail=detail, request_id=getattr(request.state, "request_id", None)).model_dump()
+        return ErrorResponse(
+            detail=detail, request_id=getattr(request.state, "request_id", None)
+        ).model_dump()
 
     @application.exception_handler(ModelUnavailableError)
     async def unavailable_handler(request: Request, exc: ModelUnavailableError) -> JSONResponse:
@@ -158,11 +170,21 @@ def create_app(
     async def unexpected_handler(request: Request, exc: Exception) -> JSONResponse:
         logger.exception(
             "unexpected_server_error",
-            extra={"request_id": getattr(request.state, "request_id", "unknown"), "endpoint": request.url.path},
+            extra={
+                "request_id": getattr(request.state, "request_id", "unknown"),
+                "endpoint": request.url.path,
+            },
         )
         return JSONResponse(status_code=500, content=error_payload(request, "Unexpected server failure"))
 
-    for router in [health.router, forecast.router, causal.router, inventory.router, models.router, metrics.router]:
+    for router in [
+        health.router,
+        forecast.router,
+        causal.router,
+        inventory.router,
+        models.router,
+        metrics.router,
+    ]:
         application.include_router(router)
         application.include_router(router, prefix="/api")
     return application

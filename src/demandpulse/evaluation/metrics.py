@@ -7,7 +7,10 @@ from collections.abc import Sequence
 import numpy as np
 
 
-def _paired_arrays(y_true: Sequence[float], y_pred: Sequence[float]) -> tuple[np.ndarray, np.ndarray]:
+from typing import Any
+
+
+def _paired_arrays(y_true: Any, y_pred: Any) -> tuple[np.ndarray, np.ndarray]:
     y = np.asarray(y_true, dtype=float)
     p = np.asarray(y_pred, dtype=float)
     if y.shape != p.shape:
@@ -16,31 +19,31 @@ def _paired_arrays(y_true: Sequence[float], y_pred: Sequence[float]) -> tuple[np
     return y[mask], p[mask]
 
 
-def mae(y_true: Sequence[float], y_pred: Sequence[float]) -> float:
+def mae(y_true: Any, y_pred: Any) -> float:
     y, p = _paired_arrays(y_true, y_pred)
     return float(np.mean(np.abs(y - p))) if len(y) else np.nan
 
 
-def rmse(y_true: Sequence[float], y_pred: Sequence[float]) -> float:
+def rmse(y_true: Any, y_pred: Any) -> float:
     y, p = _paired_arrays(y_true, y_pred)
     return float(np.sqrt(np.mean((y - p) ** 2))) if len(y) else np.nan
 
 
-def wape(y_true: Sequence[float], y_pred: Sequence[float]) -> float:
+def wape(y_true: Any, y_pred: Any) -> float:
     """Weighted absolute percentage error; returns NaN for a zero target denominator."""
     y, p = _paired_arrays(y_true, y_pred)
     denominator = np.abs(y).sum()
     return float(np.abs(y - p).sum() / denominator) if denominator > 0 else np.nan
 
 
-def bias(y_true: Sequence[float], y_pred: Sequence[float]) -> float:
+def bias(y_true: Any, y_pred: Any) -> float:
     """Positive values indicate aggregate over-forecasting; negative values under-forecasting."""
     y, p = _paired_arrays(y_true, y_pred)
     denominator = np.abs(y).sum()
     return float((p - y).sum() / denominator) if denominator > 0 else np.nan
 
 
-def point_metrics(y_true: Sequence[float], y_pred: Sequence[float]) -> dict[str, float]:
+def point_metrics(y_true: Any, y_pred: Any) -> dict[str, float]:
     y, p = _paired_arrays(y_true, y_pred)
     return {
         "mae": mae(y, p),

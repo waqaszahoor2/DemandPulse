@@ -14,7 +14,7 @@ import sys
 import time
 import traceback
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import nbformat
 from nbclient import NotebookClient
@@ -29,12 +29,12 @@ REPORT_FILE = REPORTS_DIR / "notebook_execution_report.json"
 DEFAULT_TIMEOUT = int(os.environ.get("NOTEBOOK_TIMEOUT", "7200"))
 
 
-def discover_notebooks() -> List[Path]:
+def discover_notebooks() -> list[Path]:
     """Find notebooks 01 through 07 in notebooks directory."""
     if not NOTEBOOKS_DIR.exists():
         raise FileNotFoundError(f"Notebooks directory not found: {NOTEBOOKS_DIR}")
 
-    prefix_map: Dict[str, Optional[Path]] = {
+    prefix_map: dict[str, Path | None] = {
         "01": None,
         "02": None,
         "03": None,
@@ -53,25 +53,23 @@ def discover_notebooks() -> List[Path]:
 
     missing = [prefix for prefix, path in prefix_map.items() if path is None]
     if missing:
-        raise FileNotFoundError(
-            f"Missing required notebooks for prefixes: {missing} in {NOTEBOOKS_DIR}"
-        )
+        raise FileNotFoundError(f"Missing required notebooks for prefixes: {missing} in {NOTEBOOKS_DIR}")
 
     return [prefix_map[prefix] for prefix in sorted(prefix_map.keys())]  # type: ignore[misc]
 
 
-def execute_single_notebook(notebook_path: Path, timeout: int) -> Dict[str, Any]:
+def execute_single_notebook(notebook_path: Path, timeout: int) -> dict[str, Any]:
     """Execute a single notebook in a fresh kernel and save output."""
-    print(f"\n{'='*70}")
+    print(f"\n{'=' * 70}")
     print(f">> Executing: {notebook_path.name}")
     print(f"   Timeout: {timeout} seconds")
-    print(f"{'='*70}")
+    print(f"{'=' * 70}")
 
     start_time = time.time()
     EXECUTED_DIR.mkdir(parents=True, exist_ok=True)
     out_path = EXECUTED_DIR / notebook_path.name
 
-    with open(notebook_path, "r", encoding="utf-8") as f:
+    with open(notebook_path, encoding="utf-8") as f:
         nb = nbformat.read(f, as_version=4)
 
     client = NotebookClient(
@@ -82,7 +80,7 @@ def execute_single_notebook(notebook_path: Path, timeout: int) -> Dict[str, Any]
         resources={"metadata": {"path": str(PROJECT_ROOT)}},
     )
 
-    error_info: Optional[Dict[str, Any]] = None
+    error_info: dict[str, Any] | None = None
     status = "PASS"
 
     try:
@@ -137,7 +135,7 @@ def execute_single_notebook(notebook_path: Path, timeout: int) -> Dict[str, Any]
 def main() -> int:
     REPORTS_DIR.mkdir(parents=True, exist_ok=True)
     notebooks = discover_notebooks()
-    report: List[Dict[str, Any]] = []
+    report: list[dict[str, Any]] = []
 
     print("DemandPulse Notebook Pipeline Execution")
     print(f"Discovered {len(notebooks)} notebooks:")
@@ -158,13 +156,15 @@ def main() -> int:
     with open(REPORT_FILE, "w", encoding="utf-8") as f:
         json.dump(report, f, indent=2)
 
-    print(f"\n{'='*70}")
+    print(f"\n{'=' * 70}")
     print(f"Execution Report Saved: {REPORT_FILE}")
-    print(f"{'='*70}")
+    print(f"{'=' * 70}")
 
     for item in report:
         st = "[PASS]" if item["status"] == "PASS" else "[FAIL]"
-        print(f" {st} | {item['notebook']:<45} | {item['execution_time']:>6.2f}s | {item['output_cells']} outputs")
+        print(
+            f" {st} | {item['notebook']:<45} | {item['execution_time']:>6.2f}s | {item['output_cells']} outputs"
+        )
 
     if overall_passed:
         print("\nALL 7 DEMANDPULSE NOTEBOOKS EXECUTED AND PASSED SUCCESSFULLY!")

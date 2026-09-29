@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
+from typing import cast
+
 from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
 
@@ -33,8 +36,8 @@ def ready(service: ModelService = Depends(get_model_service)) -> ReadinessRespon
         service="DemandPulse",
         version=__version__,
         models_loaded=report["models_loaded"],
-        required_components=list(report["required_components"]),
-        missing_components=list(report["missing_components"]),
+        required_components=list(cast(Iterable[str], report["required_components"])),
+        missing_components=list(cast(Iterable[str], report["missing_components"])),
     )
     if not report["ready"]:
         return JSONResponse(status_code=503, content=payload.model_dump())

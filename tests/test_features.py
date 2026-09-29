@@ -6,13 +6,15 @@ from demandpulse.features.time_features import add_time_features
 
 
 def test_lags_and_rolling_are_leakage_safe():
-    frame = pd.DataFrame({
-        "store_id": [1] * 9,
-        "product_id": [1] * 9,
-        "dt": pd.date_range("2026-01-01", periods=9, freq="D"),
-        "sale_amount": [1, 2, 3, 4, 5, 6, 7, 8, 999],
-        "stock_hour6_22_cnt": [0] * 9,
-    })
+    frame = pd.DataFrame(
+        {
+            "store_id": [1] * 9,
+            "product_id": [1] * 9,
+            "dt": pd.date_range("2026-01-01", periods=9, freq="D"),
+            "sale_amount": [1, 2, 3, 4, 5, 6, 7, 8, 999],
+            "stock_hour6_22_cnt": [0] * 9,
+        }
+    )
     out = add_lag_features(frame, lags=(1, 7), rolling_windows=(7,))
     assert out.loc[8, "lag_1"] == 8
     assert out.loc[8, "lag_7"] == 2

@@ -28,7 +28,9 @@ def create_rolling_folds(
     """Create end-anchored chronological folds with non-overlapping validation windows."""
     if forecast_horizon <= 0 or n_folds <= 0:
         raise ValueError("forecast_horizon and n_folds must be positive")
-    unique_dates = pd.DatetimeIndex(pd.to_datetime(pd.Series(dates), errors="raise").dropna().unique()).sort_values()
+    unique_dates = pd.DatetimeIndex(
+        pd.to_datetime(pd.Series(dates), errors="raise").dropna().unique()
+    ).sort_values()
     minimum = n_folds * forecast_horizon + 1
     if len(unique_dates) < minimum:
         raise ValueError(

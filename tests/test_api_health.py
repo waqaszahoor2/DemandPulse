@@ -26,6 +26,7 @@ def test_model_info_returns_safe_metadata(client):
 
 def test_health_is_liveness_even_when_models_are_not_ready(fake_service):
     from fastapi.testclient import TestClient
+
     from demandpulse.api.main import create_app
 
     fake_service.models_loaded = {"point": False, "probabilistic": False, "causal": False}

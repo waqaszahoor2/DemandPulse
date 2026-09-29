@@ -45,7 +45,7 @@ class PredictionLogRecord:
         model_version: str,
         p10: float | None = None,
         p90: float | None = None,
-    ) -> "PredictionLogRecord":
+    ) -> PredictionLogRecord:
         return cls(
             prediction_id=str(uuid4()),
             request_id=str(request_id),

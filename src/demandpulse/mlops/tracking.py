@@ -6,10 +6,10 @@ import json
 import math
 import numbers
 import subprocess
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterator, Mapping, Sequence
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Iterator
+from typing import Any
 
 from demandpulse.config import DEFAULT_CONFIG, DemandPulseConfig
 from demandpulse.utils.logging import get_logger

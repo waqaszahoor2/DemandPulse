@@ -22,8 +22,8 @@ def test_deploy_workflow_uses_wif_immutable_image_and_staging_gate():
 
 def test_cloud_run_probes_separate_readiness_and_liveness():
     workflow = (ROOT / ".github" / "workflows" / "deploy.yml").read_text(encoding="utf-8")
-    assert "startup-probe \"httpGet.path=/ready" in workflow
-    assert "liveness-probe \"httpGet.path=/health" in workflow
+    assert 'startup-probe "httpGet.path=/ready' in workflow
+    assert 'liveness-probe "httpGet.path=/health' in workflow
 
 
 def test_production_docs_exist():

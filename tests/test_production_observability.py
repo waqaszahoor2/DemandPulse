@@ -37,20 +37,24 @@ def test_telemetry_store_is_bounded_and_low_cardinality():
 
 
 def test_actual_outcomes_join_preserves_prediction_keys():
-    predictions = pd.DataFrame({
-        "store_id": [1],
-        "product_id": [10],
-        "forecast_date": ["2026-08-21"],
-        "horizon": [1],
-        "p50": [12.0],
-        "model_version": ["v1"],
-    })
-    actuals = pd.DataFrame({
-        "store_id": [1],
-        "product_id": [10],
-        "date": ["2026-08-21"],
-        "actual_sales": [11.0],
-    })
+    predictions = pd.DataFrame(
+        {
+            "store_id": [1],
+            "product_id": [10],
+            "forecast_date": ["2026-08-21"],
+            "horizon": [1],
+            "p50": [12.0],
+            "model_version": ["v1"],
+        }
+    )
+    actuals = pd.DataFrame(
+        {
+            "store_id": [1],
+            "product_id": [10],
+            "date": ["2026-08-21"],
+            "actual_sales": [11.0],
+        }
+    )
     joined = join_predictions_with_actuals(predictions, actuals)
     assert len(joined) == 1
     assert joined.iloc[0]["actual_sales"] == 11.0
@@ -58,12 +62,14 @@ def test_actual_outcomes_join_preserves_prediction_keys():
 
 
 def test_actual_outcomes_reject_duplicates():
-    actuals = pd.DataFrame({
-        "store_id": [1, 1],
-        "product_id": [10, 10],
-        "date": ["2026-08-21", "2026-08-21"],
-        "actual_sales": [11.0, 12.0],
-    })
+    actuals = pd.DataFrame(
+        {
+            "store_id": [1, 1],
+            "product_id": [10, 10],
+            "date": ["2026-08-21", "2026-08-21"],
+            "actual_sales": [11.0, 12.0],
+        }
+    )
     try:
         validate_actual_outcomes(actuals)
     except ValueError as exc:

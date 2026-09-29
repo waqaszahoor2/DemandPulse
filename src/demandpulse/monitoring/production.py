@@ -29,22 +29,26 @@ def forecast_performance_by_group(
         row: dict[str, object] = dict(zip(group_columns, keys))
         actual = group["actual_sales"].to_numpy(dtype=float)
         p50 = group["p50"].to_numpy(dtype=float)
-        row.update({
-            "observations": len(group),
-            "MAE": mae(actual, p50),
-            "WAPE": wape(actual, p50),
-            "Bias": bias(actual, p50),
-            "P50_Pinball": pinball_loss(actual, p50, 0.50),
-        })
+        row.update(
+            {
+                "observations": len(group),
+                "MAE": mae(actual, p50),
+                "WAPE": wape(actual, p50),
+                "Bias": bias(actual, p50),
+                "P50_Pinball": pinball_loss(actual, p50, 0.50),
+            }
+        )
         if {"p10", "p90"}.issubset(group.columns) and group[["p10", "p90"]].notna().all(axis=None):
             p10 = group["p10"].to_numpy(dtype=float)
             p90 = group["p90"].to_numpy(dtype=float)
-            row.update({
-                "P10_Pinball": pinball_loss(actual, p10, 0.10),
-                "P90_Pinball": pinball_loss(actual, p90, 0.90),
-                "Coverage": interval_coverage(actual, p10, p90),
-                "Interval_Width": interval_width(p10, p90),
-            })
+            row.update(
+                {
+                    "P10_Pinball": pinball_loss(actual, p10, 0.10),
+                    "P90_Pinball": pinball_loss(actual, p90, 0.90),
+                    "Coverage": interval_coverage(actual, p10, p90),
+                    "Interval_Width": interval_width(p10, p90),
+                }
+            )
         rows.append(row)
     return pd.DataFrame(rows)
 
@@ -62,27 +66,31 @@ def drift_report(
         if feature not in reference or feature not in recent:
             continue
         ks = ks_statistic(reference[feature], recent[feature])
-        rows.append({
-            "feature": feature,
-            "kind": "numeric",
-            "psi": population_stability_index(reference[feature], recent[feature]),
-            "ks_statistic": ks["statistic"],
-            "ks_pvalue": ks["pvalue"],
-            "new_category_rate": np.nan,
-            "total_variation": np.nan,
-        })
+        rows.append(
+            {
+                "feature": feature,
+                "kind": "numeric",
+                "psi": population_stability_index(reference[feature], recent[feature]),
+                "ks_statistic": ks["statistic"],
+                "ks_pvalue": ks["pvalue"],
+                "new_category_rate": np.nan,
+                "total_variation": np.nan,
+            }
+        )
     for feature in categorical_features:
         if feature not in reference or feature not in recent:
             continue
         cat = category_drift(reference[feature], recent[feature])
-        rows.append({
-            "feature": feature,
-            "kind": "categorical",
-            "psi": population_stability_index(reference[feature], recent[feature]),
-            "ks_statistic": np.nan,
-            "ks_pvalue": np.nan,
-            **cat,
-        })
+        rows.append(
+            {
+                "feature": feature,
+                "kind": "categorical",
+                "psi": population_stability_index(reference[feature], recent[feature]),
+                "ks_statistic": np.nan,
+                "ks_pvalue": np.nan,
+                **cat,
+            }
+        )
     return pd.DataFrame(rows)
 
 

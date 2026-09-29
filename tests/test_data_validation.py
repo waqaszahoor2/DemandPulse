@@ -15,11 +15,13 @@ def test_invalid_schema_raises():
 
 
 def test_duplicate_detection_raises():
-    frame = pd.DataFrame({
-        "store_id": [1, 1],
-        "product_id": [2, 2],
-        "dt": pd.to_datetime(["2026-01-01", "2026-01-01"]),
-    })
+    frame = pd.DataFrame(
+        {
+            "store_id": [1, 1],
+            "product_id": [2, 2],
+            "dt": pd.to_datetime(["2026-01-01", "2026-01-01"]),
+        }
+    )
     with pytest.raises(DataValidationError, match="Duplicate"):
         validate_duplicate_keys(frame)
 

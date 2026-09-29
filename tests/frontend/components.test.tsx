@@ -9,6 +9,9 @@ import ModelPerformance from '@/components/dashboard/ModelPerformance';
 import MonitoringPanel from '@/components/dashboard/MonitoringPanel';
 import Sidebar from '@/components/layout/Sidebar';
 import MobileHeader from '@/components/layout/MobileHeader';
+import Header from '@/components/layout/Header';
+import ForecastChart from '@/components/dashboard/ForecastChart';
+import MobileBottomNav from '@/components/layout/MobileBottomNav';
 import { DEFAULT_DASHBOARD_DATA } from '@/lib/api';
 
 // Mock Next.js navigation
@@ -29,6 +32,7 @@ vi.mock('recharts', () => ({
   Line: () => <div data-testid="line" />,
   Area: () => <div data-testid="area" />,
   ReferenceLine: () => <div data-testid="reference-line" />,
+  CartesianGrid: () => <div data-testid="cartesiangrid" />,
   Cell: () => <div data-testid="cell" />,
 }));
 
@@ -97,5 +101,28 @@ describe('DemandPulse Frontend UI Components', () => {
   it('renders MobileHeader with brand title', () => {
     render(<MobileHeader onOpenMenu={() => {}} />);
     expect(screen.getByText('/DemandPulse')).toBeInTheDocument();
+  });
+
+  it('renders Header with title and controls', () => {
+    render(<Header />);
+    expect(screen.getAllByText(/DemandPulse/i)[0]).toBeInTheDocument();
+    expect(screen.getByText(/Retail Demand Intelligence Platform/i)).toBeInTheDocument();
+  });
+
+  it('renders ForecastChart with container and controls', () => {
+    render(<ForecastChart data={DEFAULT_DASHBOARD_DATA.forecast} />);
+    expect(screen.getByText(/Demand Forecast & Uncertainty/i)).toBeInTheDocument();
+    expect(screen.getByTestId('responsive-container')).toBeInTheDocument();
+  });
+
+  it('renders MobileBottomNav with navigation bar', () => {
+    render(<MobileBottomNav menuOpen={false} setMenuOpen={() => {}} />);
+    expect(screen.getByText(/Overview/i)).toBeInTheDocument();
+    expect(screen.getByText(/Forecasting/i)).toBeInTheDocument();
+  });
+
+  it('provides default dashboard fallback data with valid elements', () => {
+    expect(DEFAULT_DASHBOARD_DATA.forecast.length).toBeGreaterThan(0);
+    expect(DEFAULT_DASHBOARD_DATA.inventory.currentStock).toBe(420);
   });
 });

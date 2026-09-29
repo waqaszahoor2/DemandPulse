@@ -17,8 +17,6 @@ SRC_DIR = PROJECT_ROOT / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
-from demandpulse.config import DEFAULT_CONFIG
-
 
 def validate_environment() -> int:
     print("=" * 70)
@@ -29,11 +27,26 @@ def validate_environment() -> int:
     env_specs = [
         ("APP_ENV", os.environ.get("APP_ENV", "production"), False, "Application runtime environment"),
         ("LOG_LEVEL", os.environ.get("LOG_LEVEL", "INFO"), False, "Logging verbosity level"),
-        ("DEMANDPULSE_MODEL_SOURCE", os.environ.get("DEMANDPULSE_MODEL_SOURCE", "local"), False, "Model artifact source (local, bundle_uri, mlflow)"),
+        (
+            "DEMANDPULSE_MODEL_SOURCE",
+            os.environ.get("DEMANDPULSE_MODEL_SOURCE", "local"),
+            False,
+            "Model artifact source (local, bundle_uri, mlflow)",
+        ),
         ("MODEL_DIR", os.environ.get("MODEL_DIR", "models"), False, "Local model directory path"),
-        ("REQUIRED_MODEL_COMPONENTS", os.environ.get("REQUIRED_MODEL_COMPONENTS", "point,probabilistic"), False, "Required model components"),
+        (
+            "REQUIRED_MODEL_COMPONENTS",
+            os.environ.get("REQUIRED_MODEL_COMPONENTS", "point,probabilistic"),
+            False,
+            "Required model components",
+        ),
         ("LOG_FORMAT", os.environ.get("LOG_FORMAT", "json"), False, "Log output format (json / text)"),
-        ("REQUEST_TIMEOUT_SECONDS", os.environ.get("REQUEST_TIMEOUT_SECONDS", "25"), False, "Request timeout limit in seconds"),
+        (
+            "REQUEST_TIMEOUT_SECONDS",
+            os.environ.get("REQUEST_TIMEOUT_SECONDS", "25"),
+            False,
+            "Request timeout limit in seconds",
+        ),
     ]
 
     all_valid = True

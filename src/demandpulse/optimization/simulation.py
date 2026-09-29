@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -31,7 +32,7 @@ def _demand_draws(
 
 
 def simulate_inventory_policy(
-    demand: Sequence[float],
+    demand: Any,
     order_quantity: float,
     *,
     unit_cost: float,
@@ -43,7 +44,18 @@ def simulate_inventory_policy(
     waste_fraction: float = 0.0,
 ) -> dict[str, float]:
     """Evaluate one fixed order quantity over simulated demand draws."""
-    if any(value < 0 for value in [order_quantity, unit_cost, selling_price, holding_cost, stockout_cost, waste_cost, ordering_cost]):
+    if any(
+        value < 0
+        for value in [
+            order_quantity,
+            unit_cost,
+            selling_price,
+            holding_cost,
+            stockout_cost,
+            waste_cost,
+            ordering_cost,
+        ]
+    ):
         raise ValueError("Costs, prices, and order quantity must be non-negative")
     if not 0.0 <= waste_fraction <= 1.0:
         raise ValueError("waste_fraction must be in [0, 1]")
@@ -98,7 +110,11 @@ def run_scenarios(
 
     scenarios = {
         "normal_demand": {"demand_multiplier": 1.0, "uncertainty_multiplier": 1.0, "uplift": 0.0},
-        "promotion_demand": {"demand_multiplier": 1.0, "uncertainty_multiplier": 1.0, "uplift": promotion_uplift},
+        "promotion_demand": {
+            "demand_multiplier": 1.0,
+            "uncertainty_multiplier": 1.0,
+            "uplift": promotion_uplift,
+        },
         "high_demand": {"demand_multiplier": 1.20, "uncertainty_multiplier": 1.0, "uplift": 0.0},
         "high_uncertainty": {"demand_multiplier": 1.0, "uncertainty_multiplier": 1.50, "uplift": 0.0},
         "stockout_risk": {"demand_multiplier": 1.15, "uncertainty_multiplier": 1.25, "uplift": 0.0},

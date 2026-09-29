@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import json
-import os
 import sys
 from pathlib import Path
 
@@ -19,8 +18,10 @@ def validate_api_entrypoint() -> bool:
         print("[FAIL]: api/index.py does not exist.")
         return False
     try:
-        from api.index import app
         from fastapi import FastAPI
+
+        from api.index import app
+
         if not isinstance(app, FastAPI):
             print("[FAIL]: app exported from api/index.py is not a FastAPI instance.")
             return False
@@ -69,18 +70,22 @@ def validate_notebook_execution_report() -> bool:
     print("\n4. Validating Notebook Execution Audit Report...")
     report_file = PROJECT_ROOT / "reports" / "notebook_execution_report.json"
     if not report_file.exists():
-        print("[FAIL]: reports/notebook_execution_report.json does not exist. Run scripts/run_all_notebooks.py first.")
+        print(
+            "[FAIL]: reports/notebook_execution_report.json does not exist. Run scripts/run_all_notebooks.py first."
+        )
         return False
     try:
-        with open(report_file, "r", encoding="utf-8") as f:
+        with open(report_file, encoding="utf-8") as f:
             data = json.load(f)
         if not isinstance(data, list) or len(data) < 7:
-            print(f"[FAIL]: Execution report contains {len(data) if isinstance(data, list) else 0} entries; expected 7.")
+            print(
+                f"[FAIL]: Execution report contains {len(data) if isinstance(data, list) else 0} entries; expected 7."
+            )
             return False
 
         failed = [item for item in data if item.get("status") != "PASS"]
         if failed:
-            print(f"[FAIL]: The following notebooks failed during execution pipeline:")
+            print("[FAIL]: The following notebooks failed during execution pipeline:")
             for item in failed:
                 print(f" - {item['notebook']}: {item.get('error')}")
             return False

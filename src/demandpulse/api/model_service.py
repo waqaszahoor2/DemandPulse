@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections.abc import Mapping
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any
 
 import lightgbm as lgb
 import numpy as np
@@ -69,8 +70,6 @@ def _load_json(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-
-
 def _metadata_from_booster(
     booster: lgb.Booster,
     *,
@@ -83,14 +82,14 @@ def _metadata_from_booster(
     category_levels: dict[str, list[Any]] = {}
     if stored_categories and len(stored_categories) == len(categorical_in_model):
         category_levels = {
-            column: list(levels)
-            for column, levels in zip(categorical_in_model, stored_categories)
+            column: list(levels) for column, levels in zip(categorical_in_model, stored_categories)
         }
     return {
         "feature_columns": features,
         "categorical_features": categorical_in_model,
         "category_levels": category_levels,
     }
+
 
 def _calendar_features(value: pd.Timestamp) -> dict[str, int]:
     iso = value.isocalendar()
@@ -223,9 +222,7 @@ class ModelService:
             model, metadata = load_point_model(path)
         else:
             model = lgb.Booster(model_file=str(path))
-            metadata = _metadata_from_booster(
-                model, categorical_candidates=self.config.categorical_features
-            )
+            metadata = _metadata_from_booster(model, categorical_candidates=self.config.categorical_features)
             logger.info("Point metadata sidecar absent; recovered feature contract from LightGBM model")
         self.point_model = model
         self.point_metadata = dict(metadata)
@@ -250,7 +247,11 @@ class ModelService:
             "model_name": model_name,
             "model_type": "MLflow registered point forecast",
             "status": "champion",
-            "training_timestamp": (str(getattr(registered, "creation_timestamp")) if getattr(registered, "creation_timestamp", None) is not None else None),
+            "training_timestamp": (
+                str(registered.creation_timestamp)
+                if getattr(registered, "creation_timestamp", None) is not None
+                else None
+            ),
         }
 
     def _load_quantile_local(self) -> None:
@@ -287,7 +288,9 @@ class ModelService:
             self._quantile_version = _sha256_short(paths)
         else:
             self._quantile_version = "unavailable"
-            logger.warning("Quantile models unavailable; probabilistic endpoint will return service unavailable")
+            logger.warning(
+                "Quantile models unavailable; probabilistic endpoint will return service unavailable"
+            )
 
     def _load_causal_local(self) -> None:
         causal_dir = self.config.models_dir / "causal"
@@ -296,7 +299,9 @@ class ModelService:
         treated_meta = _metadata_sidecar(treated_path)
         control_meta = _metadata_sidecar(control_path)
         if not treated_path.exists() or not control_path.exists():
-            logger.warning("Causal outcome models unavailable; promotion endpoint will return service unavailable")
+            logger.warning(
+                "Causal outcome models unavailable; promotion endpoint will return service unavailable"
+            )
             return
         treated_model = lgb.Booster(model_file=str(treated_path))
         control_model = lgb.Booster(model_file=str(control_path))
@@ -304,12 +309,16 @@ class ModelService:
         metadata = (
             _load_json(treated_meta)
             if treated_meta.exists()
-            else _metadata_from_booster(treated_model, categorical_candidates=self.config.categorical_features)
+            else _metadata_from_booster(
+                treated_model, categorical_candidates=self.config.categorical_features
+            )
         )
         control_metadata = (
             _load_json(control_meta)
             if control_meta.exists()
-            else _metadata_from_booster(control_model, categorical_candidates=self.config.categorical_features)
+            else _metadata_from_booster(
+                control_model, categorical_candidates=self.config.categorical_features
+            )
         )
         if metadata.get("feature_columns") != control_metadata.get("feature_columns"):
             logger.error("Causal treated/control model feature metadata do not match")
@@ -396,9 +405,7 @@ class ModelService:
     def predict_probabilistic_forecast(self, payload: Mapping[str, Any]) -> dict[str, Any]:
         horizon = int(payload["horizon"])
         if horizon < 1 or horizon > self.config.forecast_horizon:
-            raise UnsupportedHorizonError(
-                f"Supported forecast horizons are 1-{self.config.forecast_horizon}"
-            )
+            raise UnsupportedHorizonError(f"Supported forecast horizons are 1-{self.config.forecast_horizon}")
         models = self.quantile_models.get(horizon)
         if not models:
             raise ModelUnavailableError(f"Probabilistic models for horizon {horizon} are unavailable")
@@ -486,33 +493,39 @@ class ModelService:
         """Return safe public metadata without filesystem paths or environment variables."""
         info: list[dict[str, Any]] = []
         if self.point_model is not None:
-            info.append({
-                "model_name": str(self.point_metadata.get("model_name", "demandpulse-point-forecast")),
-                "model_type": str(self.point_metadata.get("model_type", "LightGBM point forecast")),
-                "version": str(self.point_metadata.get("model_version", "unknown")),
-                "training_date": self.point_metadata.get("training_timestamp"),
-                "supported_forecast_horizon": self.config.forecast_horizon,
-                "metrics": self._safe_metrics.get("point", {}),
-                "status": str(self.point_metadata.get("status", "loaded")),
-            })
+            info.append(
+                {
+                    "model_name": str(self.point_metadata.get("model_name", "demandpulse-point-forecast")),
+                    "model_type": str(self.point_metadata.get("model_type", "LightGBM point forecast")),
+                    "version": str(self.point_metadata.get("model_version", "unknown")),
+                    "training_date": self.point_metadata.get("training_timestamp"),
+                    "supported_forecast_horizon": self.config.forecast_horizon,
+                    "metrics": self._safe_metrics.get("point", {}),
+                    "status": str(self.point_metadata.get("status", "loaded")),
+                }
+            )
         if self.quantile_models:
-            info.append({
-                "model_name": "demandpulse-probabilistic",
-                "model_type": "Direct-horizon LightGBM quantile ensemble",
-                "version": self._quantile_version,
-                "training_date": None,
-                "supported_forecast_horizon": sorted(self.quantile_models),
-                "metrics": self._safe_metrics.get("probabilistic", {}),
-                "status": "loaded",
-            })
+            info.append(
+                {
+                    "model_name": "demandpulse-probabilistic",
+                    "model_type": "Direct-horizon LightGBM quantile ensemble",
+                    "version": self._quantile_version,
+                    "training_date": None,
+                    "supported_forecast_horizon": sorted(self.quantile_models),
+                    "metrics": self._safe_metrics.get("probabilistic", {}),
+                    "status": "loaded",
+                }
+            )
         if self.causal_models is not None:
-            info.append({
-                "model_name": str(self.causal_metadata.get("model_name", "demandpulse-causal-tlearner")),
-                "model_type": str(self.causal_metadata.get("model_type", "CATE T-learner")),
-                "version": str(self.causal_metadata.get("model_version", "unknown")),
-                "training_date": self.causal_metadata.get("training_timestamp"),
-                "supported_forecast_horizon": None,
-                "metrics": {},
-                "status": str(self.causal_metadata.get("status", "observational")),
-            })
+            info.append(
+                {
+                    "model_name": str(self.causal_metadata.get("model_name", "demandpulse-causal-tlearner")),
+                    "model_type": str(self.causal_metadata.get("model_type", "CATE T-learner")),
+                    "version": str(self.causal_metadata.get("model_version", "unknown")),
+                    "training_date": self.causal_metadata.get("training_timestamp"),
+                    "supported_forecast_horizon": None,
+                    "metrics": {},
+                    "status": str(self.causal_metadata.get("status", "observational")),
+                }
+            )
         return info

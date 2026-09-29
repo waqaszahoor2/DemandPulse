@@ -1,5 +1,3 @@
-import numpy as np
-
 from demandpulse.optimization.inventory import (
     calculate_reorder_point,
     calculate_safety_stock,

@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Mapping
-
 import math
+from collections.abc import Mapping
+from dataclasses import dataclass
 
 
 @dataclass(frozen=True)
@@ -48,9 +47,13 @@ def evaluate_alerts(
     if bool(signals.get("model_load_failure", False)):
         result["model_loading"] = "RED"
     if "error_rate" in signals:
-        result["api_error_rate"] = _level(float(signals["error_rate"]), thresholds.error_rate_yellow, thresholds.error_rate_red)
+        result["api_error_rate"] = _level(
+            float(signals["error_rate"]), thresholds.error_rate_yellow, thresholds.error_rate_red
+        )
     if "latency_p95_ms" in signals:
-        result["api_latency"] = _level(float(signals["latency_p95_ms"]), thresholds.latency_p95_yellow_ms, thresholds.latency_p95_red_ms)
+        result["api_latency"] = _level(
+            float(signals["latency_p95_ms"]), thresholds.latency_p95_yellow_ms, thresholds.latency_p95_red_ms
+        )
     if "max_psi" in signals:
         result["feature_drift"] = _level(float(signals["max_psi"]), thresholds.psi_yellow, thresholds.psi_red)
     if "wape_relative_degradation" in signals:
@@ -60,7 +63,11 @@ def evaluate_alerts(
             thresholds.wape_degradation_red,
         )
     if "absolute_bias" in signals:
-        result["forecast_bias"] = _level(abs(float(signals["absolute_bias"])), thresholds.absolute_bias_yellow, thresholds.absolute_bias_red)
+        result["forecast_bias"] = _level(
+            abs(float(signals["absolute_bias"])),
+            thresholds.absolute_bias_yellow,
+            thresholds.absolute_bias_red,
+        )
     if "coverage_deviation" in signals:
         result["interval_calibration"] = _level(
             abs(float(signals["coverage_deviation"])),

@@ -153,7 +153,7 @@ def promote_candidate(
         return passed, reasons
 
     current = get_model_version(model_name, alias="champion", config=config)
-    previous_version = str(getattr(current, "version"))
+    previous_version = str(current.version)
     set_model_alias(model_name, "previous_champion", previous_version, config=config)
     set_model_alias(model_name, "champion", candidate_version, config=config)
     return True, []
@@ -167,6 +167,6 @@ def rollback_champion(
 ) -> str:
     """Move `champion` back to a pre-recorded rollback alias and return its version."""
     previous = get_model_version(model_name, alias=rollback_alias, config=config)
-    version = str(getattr(previous, "version"))
+    version = str(previous.version)
     set_model_alias(model_name, "champion", version, config=config)
     return version
