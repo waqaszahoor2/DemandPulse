@@ -66,10 +66,12 @@ def test_model_service_loads_real_local_point_model_and_predicts(tmp_path, valid
     from demandpulse.forecasting.point_model import save_point_model, train_point_model
 
     n = 60
-    frame = pd.DataFrame({
-        "lag_1": np.linspace(1, 20, n),
-        "day_of_week": np.arange(n) % 7,
-    })
+    frame = pd.DataFrame(
+        {
+            "lag_1": np.linspace(1, 20, n),
+            "day_of_week": np.arange(n) % 7,
+        }
+    )
     frame["sale_amount"] = 0.9 * frame["lag_1"] + 0.2 * frame["day_of_week"]
     model, metadata = train_point_model(
         frame,

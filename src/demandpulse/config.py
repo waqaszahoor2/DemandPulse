@@ -7,7 +7,6 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-
 REQUIRED_COLUMNS: tuple[str, ...] = (
     "city_id",
     "store_id",
@@ -140,8 +139,12 @@ class DemandPulseConfig:
     app_env: str = field(default_factory=lambda: os.environ.get("APP_ENV", "development").lower())
     log_level: str = field(default_factory=lambda: os.environ.get("LOG_LEVEL", "INFO").upper())
     api_host: str = field(default_factory=lambda: os.environ.get("API_HOST", "0.0.0.0"))
-    api_port: int = field(default_factory=lambda: int(os.environ.get("PORT", os.environ.get("API_PORT", "8000"))))
-    model_source: str = field(default_factory=lambda: os.environ.get("DEMANDPULSE_MODEL_SOURCE", "local").lower())
+    api_port: int = field(
+        default_factory=lambda: int(os.environ.get("PORT", os.environ.get("API_PORT", "8000")))
+    )
+    model_source: str = field(
+        default_factory=lambda: os.environ.get("DEMANDPULSE_MODEL_SOURCE", "local").lower()
+    )
     model_bundle_uri: str | None = field(default_factory=lambda: os.environ.get("MODEL_BUNDLE_URI") or None)
     required_model_components: tuple[str, ...] = field(
         default_factory=lambda: tuple(
@@ -150,9 +153,7 @@ class DemandPulseConfig:
             if part.strip()
         )
     )
-    log_json: bool = field(
-        default_factory=lambda: os.environ.get("LOG_FORMAT", "json").lower() == "json"
-    )
+    log_json: bool = field(default_factory=lambda: os.environ.get("LOG_FORMAT", "json").lower() == "json")
     request_timeout_seconds: float = field(
         default_factory=lambda: float(os.environ.get("REQUEST_TIMEOUT_SECONDS", "25"))
     )

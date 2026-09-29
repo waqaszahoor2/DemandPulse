@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -28,9 +27,7 @@ def _node_labels(bottom: pd.DataFrame) -> pd.DataFrame:
     out["category_node"] = (
         "Category:" + out["store_id"].astype(str) + ":" + out["third_category_id"].astype(str)
     )
-    out["product_node"] = (
-        "Product:" + out["store_id"].astype(str) + ":" + out["product_id"].astype(str)
-    )
+    out["product_node"] = "Product:" + out["store_id"].astype(str) + ":" + out["product_id"].astype(str)
     return out
 
 

@@ -47,14 +47,18 @@ def train_propensity_model(
 
     categorical = [c for c in categorical_features if c in feature_columns]
     numeric = [c for c in feature_columns if c not in categorical]
-    numeric_pipe = Pipeline([
-        ("impute", SimpleImputer(strategy="median")),
-        ("scale", StandardScaler()),
-    ])
-    category_pipe = Pipeline([
-        ("impute", SimpleImputer(strategy="most_frequent")),
-        ("onehot", OneHotEncoder(handle_unknown="ignore", sparse_output=True)),
-    ])
+    numeric_pipe = Pipeline(
+        [
+            ("impute", SimpleImputer(strategy="median")),
+            ("scale", StandardScaler()),
+        ]
+    )
+    category_pipe = Pipeline(
+        [
+            ("impute", SimpleImputer(strategy="most_frequent")),
+            ("onehot", OneHotEncoder(handle_unknown="ignore", sparse_output=True)),
+        ]
+    )
     preprocess = ColumnTransformer(
         [("numeric", numeric_pipe, numeric), ("categorical", category_pipe, categorical)],
         remainder="drop",

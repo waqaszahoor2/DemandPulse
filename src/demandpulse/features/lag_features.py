@@ -51,12 +51,8 @@ def add_lag_features(
 
     shifted = grouped[target_col].transform(lambda s: s.shift(1))
     grouped_shifted = shifted.groupby([out[col] for col in group_cols], sort=False)
-    out["rolling_min_7"] = grouped_shifted.transform(
-        lambda s: s.rolling(7, min_periods=7).min()
-    )
-    out["rolling_max_7"] = grouped_shifted.transform(
-        lambda s: s.rolling(7, min_periods=7).max()
-    )
+    out["rolling_min_7"] = grouped_shifted.transform(lambda s: s.rolling(7, min_periods=7).min())
+    out["rolling_max_7"] = grouped_shifted.transform(lambda s: s.rolling(7, min_periods=7).max())
 
     if stockout_col in out:
         out["stockout_flag"] = out[stockout_col].gt(0).astype("int8")

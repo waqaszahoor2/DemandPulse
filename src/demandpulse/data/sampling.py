@@ -11,7 +11,7 @@ def series_bucket(store_id: Any, product_id: Any, buckets: int = 10_000) -> int:
     """Return the stable SHA-256 bucket used by the DemandPulse notebooks."""
     if buckets <= 0:
         raise ValueError("buckets must be positive")
-    token = f"{store_id}-{product_id}".encode("utf-8")
+    token = f"{store_id}-{product_id}".encode()
     digest = hashlib.sha256(token).digest()
     return int.from_bytes(digest[:8], byteorder="big", signed=False) % buckets
 

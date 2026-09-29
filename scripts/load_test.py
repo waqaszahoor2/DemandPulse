@@ -34,7 +34,12 @@ async def _one(client: httpx.AsyncClient, url: str, semaphore: asyncio.Semaphore
 
 
 async def run_level(
-    base_url: str, endpoint: str, concurrency: int, requests: int, timeout: float, bearer_token: str | None = None
+    base_url: str,
+    endpoint: str,
+    concurrency: int,
+    requests: int,
+    timeout: float,
+    bearer_token: str | None = None,
 ) -> Result:
     semaphore = asyncio.Semaphore(concurrency)
     url = f"{base_url.rstrip('/')}/{endpoint.lstrip('/')}"

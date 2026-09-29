@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import date
-from typing import Annotated, Any, Literal
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, FiniteFloat, model_validator
 
@@ -56,7 +56,7 @@ class ForecastRequest(StrictSchema):
     activity_flag: BinaryFlag = Field(description="Known/planned activity flag")
 
     @model_validator(mode="after")
-    def validate_rolling_range(self) -> "ForecastRequest":
+    def validate_rolling_range(self) -> ForecastRequest:
         if self.rolling_min_7 > self.rolling_max_7:
             raise ValueError("rolling_min_7 cannot exceed rolling_max_7")
         return self
@@ -88,7 +88,7 @@ class ProbabilisticForecastResponse(StrictSchema):
     conformal_applied: bool
 
     @model_validator(mode="after")
-    def validate_interval_order(self) -> "ProbabilisticForecastResponse":
+    def validate_interval_order(self) -> ProbabilisticForecastResponse:
         if not self.p10 <= self.p50 <= self.p90:
             raise ValueError("response quantiles must satisfy P10 <= P50 <= P90")
         if self.interval_lower > self.interval_upper:
@@ -148,7 +148,7 @@ class InventoryRequest(StrictSchema):
     lead_time_days: Annotated[FiniteFloat, Field(gt=0)] = 1.0
 
     @model_validator(mode="after")
-    def validate_quantiles_and_costs(self) -> "InventoryRequest":
+    def validate_quantiles_and_costs(self) -> InventoryRequest:
         if not self.p10 <= self.p50 <= self.p90:
             raise ValueError("P10 <= P50 <= P90 is required")
         if self.holding_cost + self.stockout_cost <= 0:

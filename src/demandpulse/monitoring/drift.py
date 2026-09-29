@@ -59,12 +59,14 @@ def missing_value_drift(reference: pd.DataFrame, recent: pd.DataFrame) -> pd.Dat
     for column in columns:
         ref_rate = float(reference[column].isna().mean())
         cur_rate = float(recent[column].isna().mean())
-        rows.append({
-            "feature": column,
-            "reference_missing_rate": ref_rate,
-            "recent_missing_rate": cur_rate,
-            "missing_rate_change": cur_rate - ref_rate,
-        })
+        rows.append(
+            {
+                "feature": column,
+                "reference_missing_rate": ref_rate,
+                "recent_missing_rate": cur_rate,
+                "missing_rate_change": cur_rate - ref_rate,
+            }
+        )
     return pd.DataFrame(rows)
 
 

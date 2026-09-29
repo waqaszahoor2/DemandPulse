@@ -7,7 +7,6 @@ from collections.abc import Sequence
 import numpy as np
 import pandas as pd
 
-
 PREDICTION_JOIN_KEYS = ["store_id", "product_id", "forecast_date"]
 ACTUAL_COLUMNS = ["store_id", "product_id", "date", "actual_sales"]
 
@@ -34,7 +33,13 @@ def join_predictions_with_actuals(
     predictions: pd.DataFrame,
     actuals: pd.DataFrame,
     *,
-    required_prediction_columns: Sequence[str] = ("store_id", "product_id", "forecast_date", "p50", "model_version"),
+    required_prediction_columns: Sequence[str] = (
+        "store_id",
+        "product_id",
+        "forecast_date",
+        "p50",
+        "model_version",
+    ),
 ) -> pd.DataFrame:
     """Join immutable prediction records to later-arriving actuals on business keys."""
     missing = sorted(set(required_prediction_columns) - set(predictions.columns))

@@ -52,10 +52,7 @@ def align_categorical_features(
 def _validate_feature_columns(feature_columns: Sequence[str]) -> None:
     forbidden = sorted(set(feature_columns) & FORBIDDEN_SAME_DAY_PREDICTORS)
     if forbidden:
-        raise ValueError(
-            "Same-day leakage-prone predictors are forbidden in the point model: "
-            f"{forbidden}"
-        )
+        raise ValueError(f"Same-day leakage-prone predictors are forbidden in the point model: {forbidden}")
 
 
 def train_point_model(

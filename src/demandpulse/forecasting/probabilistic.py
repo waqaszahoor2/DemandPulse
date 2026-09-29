@@ -142,7 +142,7 @@ def calculate_conformal_adjustment(
     try:
         return float(np.quantile(scores, level, method="higher"))
     except TypeError:
-        return float(np.quantile(scores, level, interpolation="higher"))
+        return float(np.quantile(scores, level))  # type: ignore[call-overload]
 
 
 def apply_conformal_adjustment(

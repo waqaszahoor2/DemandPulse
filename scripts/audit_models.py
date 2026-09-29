@@ -38,12 +38,14 @@ def main() -> None:
             size_mb = round(path.stat().st_size / (1024 * 1024), 4)
             rel_path = str(path.relative_to(PROJECT_ROOT))
             req = is_required_for_api(path)
-            rows.append({
-                "model": path.name,
-                "path": rel_path,
-                "size_mb": size_mb,
-                "required_for_api": req,
-            })
+            rows.append(
+                {
+                    "model": path.name,
+                    "path": rel_path,
+                    "size_mb": size_mb,
+                    "required_for_api": req,
+                }
+            )
             total_mb += size_mb
 
     with open(OUTPUT_CSV, "w", newline="", encoding="utf-8") as f:

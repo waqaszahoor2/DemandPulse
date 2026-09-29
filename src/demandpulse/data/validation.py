@@ -41,9 +41,7 @@ def validate_duplicate_keys(
     mask = frame.duplicated(list(keys), keep=False)
     if mask.any():
         examples = frame.loc[mask, list(keys)].head(10).to_dict(orient="records")
-        raise DataValidationError(
-            f"Duplicate key rows detected for {list(keys)}; examples={examples}"
-        )
+        raise DataValidationError(f"Duplicate key rows detected for {list(keys)}; examples={examples}")
 
 
 def validate_dates(frame: pd.DataFrame, date_col: str = "dt") -> None:

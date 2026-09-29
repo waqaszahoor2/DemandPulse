@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
-from typing import Any, Mapping, Sequence
+from typing import Any
 
 
 @dataclass(frozen=True)
@@ -31,7 +32,7 @@ class ModelMetadata:
         return payload
 
     @classmethod
-    def from_mapping(cls, values: Mapping[str, Any]) -> "ModelMetadata":
+    def from_mapping(cls, values: Mapping[str, Any]) -> ModelMetadata:
         """Build metadata from a persisted mapping while ignoring unknown fields."""
         metrics = values.get("metrics") or {}
         return cls(
@@ -41,16 +42,12 @@ class ModelMetadata:
             dataset_id=str(values.get("dataset_id", "unknown")),
             sample_percentage=float(values.get("sample_percentage", 0.0)),
             forecast_horizon=(
-                int(values["forecast_horizon"])
-                if values.get("forecast_horizon") is not None
-                else None
+                int(values["forecast_horizon"]) if values.get("forecast_horizon") is not None else None
             ),
             features=tuple(str(v) for v in values.get("features", ())),
             metrics={str(k): float(v) for k, v in metrics.items()},
             training_timestamp=(
-                str(values["training_timestamp"])
-                if values.get("training_timestamp") is not None
-                else None
+                str(values["training_timestamp"]) if values.get("training_timestamp") is not None else None
             ),
             git_commit=str(values["git_commit"]) if values.get("git_commit") else None,
             status=str(values.get("status", "unknown")),

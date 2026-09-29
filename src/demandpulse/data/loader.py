@@ -31,9 +31,7 @@ def load_remote_dataset(
     try:
         stream = load_dataset(config.dataset_id, split=split, streaming=True)
     except Exception as exc:
-        raise RuntimeError(
-            f"Unable to stream split={split!r} from {config.dataset_id!r}: {exc}"
-        ) from exc
+        raise RuntimeError(f"Unable to stream split={split!r} from {config.dataset_id!r}: {exc}") from exc
 
     feature_names = list(getattr(getattr(stream, "features", None), "keys", lambda: [])())
     if not feature_names and getattr(stream, "features", None) is not None:
@@ -55,9 +53,7 @@ def _batch_iterator(stream: Any, batch_size: int) -> Iterable[dict[str, Sequence
     if hasattr(stream, "batch"):
         yield from stream.batch(batch_size=batch_size)
         return
-    raise TypeError(
-        "Expected a Hugging Face IterableDataset supporting iter(batch_size=...) or batch(...)."
-    )
+    raise TypeError("Expected a Hugging Face IterableDataset supporting iter(batch_size=...) or batch(...).")
 
 
 def materialize_stream(

@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Mapping
 
 import numpy as np
 
@@ -57,13 +57,15 @@ def calculate_performance_snapshot(
         "p50_pinball": pinball_loss(actual, p50, 0.50),
     }
     if p10 is not None and p90 is not None:
-        result.update({
-            "p10_pinball": pinball_loss(actual, p10, 0.10),
-            "p90_pinball": pinball_loss(actual, p90, 0.90),
-            "coverage": interval_coverage(actual, p10, p90),
-            "interval_width": interval_width(p10, p90),
-            "coverage_deviation": abs(interval_coverage(actual, p10, p90) - nominal_coverage),
-        })
+        result.update(
+            {
+                "p10_pinball": pinball_loss(actual, p10, 0.10),
+                "p90_pinball": pinball_loss(actual, p90, 0.90),
+                "coverage": interval_coverage(actual, p10, p90),
+                "interval_width": interval_width(p10, p90),
+                "coverage_deviation": abs(interval_coverage(actual, p10, p90) - nominal_coverage),
+            }
+        )
     return result
 
 

@@ -28,10 +28,12 @@ def test_model_service_loads_real_quantile_artifacts_and_applies_conformal(tmp_p
     from demandpulse.forecasting.probabilistic import train_quantile_model
 
     n = 80
-    train = pd.DataFrame({
-        "lag_1": np.linspace(1, 20, n),
-        "forecast_day_of_week": np.arange(n) % 7,
-    })
+    train = pd.DataFrame(
+        {
+            "lag_1": np.linspace(1, 20, n),
+            "forecast_day_of_week": np.arange(n) % 7,
+        }
+    )
     train["target"] = train["lag_1"] + 0.3 * train["forecast_day_of_week"]
     config = DemandPulseConfig(project_root=tmp_path)
     config.quantile_models_dir.mkdir(parents=True, exist_ok=True)

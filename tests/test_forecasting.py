@@ -3,8 +3,8 @@ import pandas as pd
 
 from demandpulse.evaluation.backtesting import create_rolling_folds
 from demandpulse.forecasting.baselines import moving_average_forecast, seasonal_naive_forecast
+from demandpulse.forecasting.hierarchical import bottom_up_reconciliation, build_summing_matrix
 from demandpulse.forecasting.point_model import predict_point, train_point_model
-from demandpulse.forecasting.hierarchical import build_summing_matrix, bottom_up_reconciliation
 
 
 class NegativeModel:
@@ -20,12 +20,14 @@ def test_negative_point_forecasts_are_clipped():
 
 
 def test_baselines_use_history_only():
-    frame = pd.DataFrame({
-        "store_id": [1] * 8,
-        "product_id": [1] * 8,
-        "dt": pd.date_range("2026-01-01", periods=8),
-        "sale_amount": np.arange(1, 9, dtype=float),
-    })
+    frame = pd.DataFrame(
+        {
+            "store_id": [1] * 8,
+            "product_id": [1] * 8,
+            "dt": pd.date_range("2026-01-01", periods=8),
+            "sale_amount": np.arange(1, 9, dtype=float),
+        }
+    )
     seasonal = seasonal_naive_forecast(frame)
     assert seasonal.iloc[7] == 1.0
     ma = moving_average_forecast(frame, window=3)
@@ -41,12 +43,14 @@ def test_chronological_folds_have_no_overlap():
 
 def test_small_lightgbm_training_roundtrip_prediction():
     n = 80
-    frame = pd.DataFrame({
-        "lag_1": np.linspace(1, 10, n),
-        "day_of_week": np.arange(n) % 7,
-        "store_id": np.where(np.arange(n) % 2 == 0, 1, 2),
-        "product_id": np.where(np.arange(n) % 3 == 0, 10, 11),
-    })
+    frame = pd.DataFrame(
+        {
+            "lag_1": np.linspace(1, 10, n),
+            "day_of_week": np.arange(n) % 7,
+            "store_id": np.where(np.arange(n) % 2 == 0, 1, 2),
+            "product_id": np.where(np.arange(n) % 3 == 0, 10, 11),
+        }
+    )
     frame["sale_amount"] = 0.8 * frame["lag_1"] + 0.1 * frame["day_of_week"]
     model, metadata = train_point_model(
         frame,
@@ -60,12 +64,14 @@ def test_small_lightgbm_training_roundtrip_prediction():
 
 
 def test_bottom_up_uses_correct_product_mapping_order():
-    mapping = pd.DataFrame({
-        "city_id": [1, 1],
-        "store_id": [10, 10],
-        "third_category_id": [5, 5],
-        "product_id": [200, 100],  # deliberately non-sorted input order
-    })
+    mapping = pd.DataFrame(
+        {
+            "city_id": [1, 1],
+            "store_id": [10, 10],
+            "third_category_id": [5, 5],
+            "product_id": [200, 100],  # deliberately non-sorted input order
+        }
+    )
     hierarchy = build_summing_matrix(mapping)
     base = np.zeros(len(hierarchy.nodes), dtype=float)
     node_index = dict(zip(hierarchy.nodes["node_id"], hierarchy.nodes["row_idx"]))
